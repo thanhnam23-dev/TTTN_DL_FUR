@@ -1,0 +1,29 @@
+# Data folders (Dữ liệu ảnh thô và dữ liệu đã phân chia)
+data/
+dataset/
+
+# Model weights (Trọng số mô hình PyTorch nặng >100MB không đẩy lên Git)
+weights/
+*.pth
+*.pt
+*.onnx
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual Environment (nếu lỡ tạo trong folder dự án)
+env/
+venv/
+furniture_env/
+
+# IDE & OS settings
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
