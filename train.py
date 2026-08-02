@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-# Ep encoding UTF-8 cho stdout/stderr tren Windows de khong bao gio bi UnicodeEncodeError
+# Ep encoding UTF-8 cho stdout/stderr tren Windows
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
@@ -40,12 +40,10 @@ PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 # Hyperparameters
 BATCH_SIZE = 32
 NUM_CLASSES = 6
-STAGE1_EPOCHS = 10  # Phase 1: 10 Epochs (Freeze Backbone)
-STAGE2_EPOCHS = 20  # Phase 2: 20 Epochs (Unfreeze Full Model) -> Tong cong 30 Epochs
-NUM_WORKERS = 2
+STAGE1_EPOCHS = 10
+STAGE2_EPOCHS = 20
+NUM_WORKERS = 0  # 0 worker trên Windows
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-print(f"[INFO] Using device: {DEVICE}")
 
 # Data Transformations
 data_transforms = {
@@ -74,18 +72,19 @@ def safe_pil_loader(path):
         img = Image.open(f)
         return img.convert('RGB')
 
-image_datasets = {
-    x: datasets.ImageFolder(DATASET_DIR / x, data_transforms[x], loader=safe_pil_loader)
-    for x in ['train', 'val', 'test']
-}
+def get_dataloaders():
+    image_datasets = {
+        x: datasets.ImageFolder(DATASET_DIR / x, data_transforms[x], loader=safe_pil_loader)
+        for x in ['train', 'val', 'test']
+    }
 
-dataloaders = {
-    x: DataLoader(image_datasets[x], batch_size=BATCH_SIZE, shuffle=(x == 'train'), num_workers=NUM_WORKERS, pin_memory=True)
-    for x in ['train', 'val', 'test']
-}
+    dataloaders = {
+        x: DataLoader(image_datasets[x], batch_size=BATCH_SIZE, shuffle=(x == 'train'), num_workers=NUM_WORKERS, pin_memory=True)
+        for x in ['train', 'val', 'test']
+    }
 
-class_names = image_datasets['train'].classes
-print(f"[INFO] Class names ({len(class_names)}): {class_names}")
+    class_names = image_datasets['train'].classes
+    return dataloaders, image_datasets, class_names
 
 def get_model(model_name, num_classes=NUM_CLASSES):
     if model_name == "mobilenet_v2":
@@ -106,7 +105,17 @@ def get_model(model_name, num_classes=NUM_CLASSES):
     else:
         raise ValueError(f"Unknown model_name: {model_name}")
 
-def train_model(model_name):
+def format_time(seconds):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h}h{m:02d}m{s:02d}s"
+    elif m > 0:
+        return f"{m:02d}m{s:02d}s"
+    else:
+        return f"{s:02d}s"
+
+def train_model(model_name, dataloaders, image_datasets, class_names):
     print(f"\n==========================================")
     print(f"=== Start Training Model: {model_name} (30 Epochs) ===")
     print(f"==========================================")
@@ -134,12 +143,15 @@ def train_model(model_name):
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-
     total_epochs = STAGE1_EPOCHS + STAGE2_EPOCHS
 
     for epoch in range(1, STAGE1_EPOCHS + 1):
-        start_time = time.time()
+        epoch_start_time = time.time()
+        phase_times = {}
+
         for phase in ['train', 'val']:
+            phase_start_time = time.time()
+
             if phase == 'train':
                 model.train()
             else:
@@ -147,8 +159,11 @@ def train_model(model_name):
 
             running_loss = 0.0
             running_corrects = 0
+            total_batches = len(dataloaders[phase])
 
-            for inputs, labels in dataloaders[phase]:
+            print(f"\n-> [{phase.upper()}] Phase | Epoch {epoch:02d}/{total_epochs:02d} ({total_batches} batches)")
+
+            for step, (inputs, labels) in enumerate(dataloaders[phase], start=1):
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
 
@@ -166,6 +181,20 @@ def train_model(model_name):
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
+                # Cập nhật thông báo có thời gian trôi qua (Elapsed) & thời gian dự kiến còn lại (ETA)
+                if step % 20 == 0 or step == total_batches:
+                    elapsed_phase = time.time() - phase_start_time
+                    avg_time_per_batch = elapsed_phase / step
+                    eta_phase = avg_time_per_batch * (total_batches - step)
+
+                    curr_loss = running_loss / (step * BATCH_SIZE)
+                    curr_acc = (running_corrects.double() / (step * BATCH_SIZE)).item()
+                    percent = (step / total_batches) * 100
+                    current_lr = optimizer.param_groups[0]['lr']
+
+                    print(f"   [{phase.upper()}] Step {step:03d}/{total_batches:03d} ({percent:5.1f}%) | Time: {format_time(elapsed_phase)} (ETA: {format_time(eta_phase)}) | Loss: {curr_loss:.4f} | Acc: {curr_acc:.4f} | LR: {current_lr:.1e}", flush=True)
+
+            phase_times[phase] = time.time() - phase_start_time
             epoch_loss = running_loss / len(image_datasets[phase])
             epoch_acc = (running_corrects.double() / len(image_datasets[phase])).item()
 
@@ -180,8 +209,10 @@ def train_model(model_name):
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(model.state_dict())
 
-        elapsed = time.time() - start_time
-        print(f"Epoch {epoch:02d}/{total_epochs:02d} [{elapsed:.1f}s] | Train Loss: {history['train_loss'][-1]:.4f} Acc: {history['train_acc'][-1]:.4f} | Val Loss: {history['val_loss'][-1]:.4f} Acc: {history['val_acc'][-1]:.4f}")
+        total_epoch_time = time.time() - epoch_start_time
+        print(f"\n=> [SUMMARY Epoch {epoch:02d}/{total_epochs:02d}] Total Time: {format_time(total_epoch_time)} (Train: {format_time(phase_times['train'])}, Val: {format_time(phase_times['val'])})")
+        print(f"   Train Loss: {history['train_loss'][-1]:.4f} | Train Acc: {history['train_acc'][-1]:.4f}")
+        print(f"   Val Loss  : {history['val_loss'][-1]:.4f} | Val Acc  : {history['val_acc'][-1]:.4f} (Best Val Acc: {best_acc:.4f})")
 
     # ------------------ STAGE 2: Unfreeze backbone ------------------
     print(f"\n--- Stage 2: Unfreeze Backbone & Fine-tune All Layers ({STAGE2_EPOCHS} Epochs, LR=1e-5) ---")
@@ -191,8 +222,12 @@ def train_model(model_name):
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
 
     for epoch in range(STAGE1_EPOCHS + 1, total_epochs + 1):
-        start_time = time.time()
+        epoch_start_time = time.time()
+        phase_times = {}
+
         for phase in ['train', 'val']:
+            phase_start_time = time.time()
+
             if phase == 'train':
                 model.train()
             else:
@@ -200,8 +235,11 @@ def train_model(model_name):
 
             running_loss = 0.0
             running_corrects = 0
+            total_batches = len(dataloaders[phase])
 
-            for inputs, labels in dataloaders[phase]:
+            print(f"\n-> [{phase.upper()}] Phase | Epoch {epoch:02d}/{total_epochs:02d} ({total_batches} batches)")
+
+            for step, (inputs, labels) in enumerate(dataloaders[phase], start=1):
                 inputs = inputs.to(DEVICE)
                 labels = labels.to(DEVICE)
 
@@ -219,6 +257,20 @@ def train_model(model_name):
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
+                # Cập nhật thông báo có thời gian trôi qua (Elapsed) & thời gian dự kiến còn lại (ETA)
+                if step % 20 == 0 or step == total_batches:
+                    elapsed_phase = time.time() - phase_start_time
+                    avg_time_per_batch = elapsed_phase / step
+                    eta_phase = avg_time_per_batch * (total_batches - step)
+
+                    curr_loss = running_loss / (step * BATCH_SIZE)
+                    curr_acc = (running_corrects.double() / (step * BATCH_SIZE)).item()
+                    percent = (step / total_batches) * 100
+                    current_lr = optimizer.param_groups[0]['lr']
+
+                    print(f"   [{phase.upper()}] Step {step:03d}/{total_batches:03d} ({percent:5.1f}%) | Time: {format_time(elapsed_phase)} (ETA: {format_time(eta_phase)}) | Loss: {curr_loss:.4f} | Acc: {curr_acc:.4f} | LR: {current_lr:.1e}", flush=True)
+
+            phase_times[phase] = time.time() - phase_start_time
             epoch_loss = running_loss / len(image_datasets[phase])
             epoch_acc = (running_corrects.double() / len(image_datasets[phase])).item()
 
@@ -233,13 +285,15 @@ def train_model(model_name):
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(model.state_dict())
 
-        elapsed = time.time() - start_time
-        print(f"Epoch {epoch:02d}/{total_epochs:02d} [{elapsed:.1f}s] | Train Loss: {history['train_loss'][-1]:.4f} Acc: {history['train_acc'][-1]:.4f} | Val Loss: {history['val_loss'][-1]:.4f} Acc: {history['val_acc'][-1]:.4f}")
+        total_epoch_time = time.time() - epoch_start_time
+        print(f"\n=> [SUMMARY Epoch {epoch:02d}/{total_epochs:02d}] Total Time: {format_time(total_epoch_time)} (Train: {format_time(phase_times['train'])}, Val: {format_time(phase_times['val'])})")
+        print(f"   Train Loss: {history['train_loss'][-1]:.4f} | Train Acc: {history['train_acc'][-1]:.4f}")
+        print(f"   Val Loss  : {history['val_loss'][-1]:.4f} | Val Acc  : {history['val_acc'][-1]:.4f} (Best Val Acc: {best_acc:.4f})")
 
     # Load best weights & Save
     model.load_state_dict(best_model_wts)
     torch.save(model.state_dict(), save_path)
-    print(f"[SUCCESS] Saved best weights to {save_path.name} (Best Val Acc: {best_acc:.4f})")
+    print(f"\n[SUCCESS] Saved best weights to {save_path.name} (Best Val Acc: {best_acc:.4f})")
 
     # Save history json
     history_file = LOGS_DIR / f"{model_name}_history.json"
@@ -247,10 +301,10 @@ def train_model(model_name):
         json.dump(history, f, indent=4)
 
     # ------------------ EVALUATE ON TEST SET ------------------
-    metrics = evaluate_on_test(model, model_name)
+    metrics = evaluate_on_test(model, model_name, dataloaders, class_names)
     return metrics
 
-def evaluate_on_test(model, model_name):
+def evaluate_on_test(model, model_name, dataloaders, class_names):
     print(f"\n--- Evaluating Model {model_name} on Test Set ---")
     model.eval()
 
@@ -275,10 +329,8 @@ def evaluate_on_test(model, model_name):
     all_targets = np.array(all_targets)
     all_probs = np.array(all_probs)
 
-    # Binarize targets for ROC-AUC & PR-AUC
     y_test_bin = label_binarize(all_targets, classes=list(range(NUM_CLASSES)))
 
-    # Compute metrics
     acc = accuracy_score(all_targets, all_preds)
     prec = precision_score(all_targets, all_preds, average='weighted')
     rec = recall_score(all_targets, all_preds, average='weighted')
@@ -298,7 +350,6 @@ def evaluate_on_test(model, model_name):
         "PR-AUC": round(float(pr_auc), 4)
     }
 
-    # Save detailed evaluation file including confusion matrix & probabilities for plotting
     eval_file = LOGS_DIR / f"{model_name}_metrics.json"
     eval_data = {
         "metrics": metrics,
@@ -321,14 +372,17 @@ def evaluate_on_test(model, model_name):
     return metrics
 
 def main():
+    print(f"[INFO] Using device: {DEVICE}")
+    dataloaders, image_datasets, class_names = get_dataloaders()
+    print(f"[INFO] Class names ({len(class_names)}): {class_names}")
+
     models_to_train = ["mobilenet_v2", "resnet18", "efficientnet_b0"]
     all_metrics = []
 
     for m in models_to_train:
-        m_metrics = train_model(m)
+        m_metrics = train_model(m, dataloaders, image_datasets, class_names)
         all_metrics.append(m_metrics)
 
-    # Save summary CSV
     df = pd.DataFrame(all_metrics)
     csv_path = LOGS_DIR / "model_comparison.csv"
     df.to_csv(csv_path, index=False, encoding='utf-8-sig')

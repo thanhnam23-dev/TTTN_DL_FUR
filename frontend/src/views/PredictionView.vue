@@ -1,20 +1,20 @@
 <template>
-  <div class="space-y-8 py-4">
+  <div class="space-y-6 py-4">
     
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl border border-slate-800">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-indigo-200 bg-indigo-50/80 shadow-xs">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
-          <ScanSearch class="w-7 h-7 text-indigo-400" />
+        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+          <ScanSearch class="w-6 h-6 text-indigo-600" />
           <span>Dự Đoán Phân Loại & Grad-CAM</span>
         </h1>
-        <p class="text-xs sm:text-sm text-slate-400 mt-1">
-          Upload ảnh sản phẩm nội thất để hệ thống nhận diện và hiển thị bản đồ vùng chú ý
+        <p class="text-xs text-slate-600 mt-0.5 font-medium">
+          Upload ảnh sản phẩm nội thất để nhận diện và xem bản đồ nhiệt vùng chú ý Grad-CAM
         </p>
       </div>
 
       <!-- Model Selector -->
-      <div class="bg-slate-950 p-1.5 rounded-xl border border-slate-800 flex items-center space-x-1">
+      <div class="bg-white p-1 rounded-xl border border-indigo-200 flex items-center space-x-1 shadow-xs">
         <button
           v-for="m in modelOptions"
           :key="m.id"
@@ -22,8 +22,8 @@
           :class="[
             'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5',
             selectedModel === m.id
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-700 hover:bg-slate-100'
           ]"
         >
           <Cpu class="w-3.5 h-3.5" />
@@ -32,10 +32,10 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       <!-- Left Column: Upload & Control Panel -->
-      <div class="lg:col-span-5 space-y-6">
+      <div class="lg:col-span-5 space-y-4">
         
         <!-- Drag and Drop Dropzone -->
         <div
@@ -43,12 +43,12 @@
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleDrop"
           :class="[
-            'relative rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 flex flex-col items-center justify-center min-h-[300px]',
+            'relative rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-150 flex flex-col items-center justify-center min-h-[280px]',
             isDragging
-              ? 'border-indigo-500 bg-indigo-500/10 scale-[1.01]'
+              ? 'border-indigo-500 bg-indigo-100'
               : selectedImagePreview
-              ? 'border-slate-700 bg-slate-900/60'
-              : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
+              ? 'border-slate-300 bg-white'
+              : 'border-indigo-300 bg-sky-50/60 hover:border-indigo-400'
           ]"
         >
           <input
@@ -60,41 +60,41 @@
           />
 
           <!-- Preview Mode -->
-          <div v-if="selectedImagePreview" class="relative w-full h-64 rounded-xl overflow-hidden group">
+          <div v-if="selectedImagePreview" class="relative w-full h-60 rounded-xl overflow-hidden group shadow-xs">
             <img :src="selectedImagePreview" class="w-full h-full object-cover rounded-xl" alt="Preview" />
-            <div class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-3">
+            <div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
               <button
                 @click="triggerFileInput"
-                class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 hover:bg-indigo-500"
+                class="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 hover:bg-indigo-700 shadow-sm"
               >
-                <Upload class="w-4 h-4" /> Đổi Ảnh
+                <Upload class="w-3.5 h-3.5" /> Đổi Ảnh
               </button>
               <button
                 @click="clearImage"
-                class="px-3 py-2 rounded-lg bg-red-600/80 text-white text-xs font-bold flex items-center gap-1 hover:bg-red-500"
+                class="px-3 py-1.5 rounded bg-rose-600 text-white text-xs font-bold flex items-center gap-1 hover:bg-rose-700 shadow-sm"
               >
-                <Trash2 class="w-4 h-4" /> Xoá
+                <Trash2 class="w-3.5 h-3.5" /> Xoá
               </button>
             </div>
           </div>
 
           <!-- Empty Upload Prompt -->
-          <div v-else class="space-y-4 cursor-pointer" @click="triggerFileInput">
-            <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mx-auto">
-              <UploadCloud class="w-8 h-8" />
+          <div v-else class="space-y-3 cursor-pointer" @click="triggerFileInput">
+            <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-sm">
+              <UploadCloud class="w-6 h-6" />
             </div>
             <div>
-              <p class="text-sm font-bold text-white">Kéo thả ảnh vào đây hoặc bấm để chọn</p>
-              <p class="text-xs text-slate-500 mt-1">Hỗ trợ định dạng JPG, PNG, WEBP (Tối đa 10MB)</p>
+              <p class="text-xs font-extrabold text-slate-900">Kéo thả ảnh vào đây hoặc bấm để chọn</p>
+              <p class="text-[11px] text-slate-600 mt-0.5 font-semibold">Hỗ trợ JPG, PNG, WEBP</p>
             </div>
           </div>
         </div>
 
-        <!-- Sample Presets (Click to Test Instantly) -->
-        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-3">
-          <p class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            <Sparkles class="w-3.5 h-3.5 text-indigo-400" />
-            <span>Ảnh mẫu kiểm thử nhanh (Click chọn thử):</span>
+        <!-- Sample Presets -->
+        <div class="p-4 rounded-2xl border border-sky-200 bg-sky-50/70 space-y-2.5 shadow-xs">
+          <p class="text-xs font-extrabold text-sky-900 flex items-center gap-1.5">
+            <Sparkles class="w-3.5 h-3.5 text-sky-600" />
+            <span>Ảnh mẫu kiểm thử nhanh (Bấm chọn thử):</span>
           </p>
 
           <div class="grid grid-cols-3 gap-2">
@@ -103,14 +103,14 @@
               :key="sample.id"
               @click="selectSampleImage(sample)"
               :class="[
-                'p-2 rounded-lg border text-left text-xs transition-all flex items-center space-x-2',
+                'p-2 rounded-xl border text-left text-xs transition-all flex items-center space-x-1.5 shadow-xs',
                 selectedSampleId === sample.id
-                  ? 'border-indigo-500 bg-indigo-500/20 text-white'
-                  : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                  ? 'border-indigo-600 bg-indigo-600 text-white font-extrabold'
+                  : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 font-semibold'
               ]"
             >
-              <span class="text-base">{{ sample.emoji }}</span>
-              <span class="truncate font-semibold">{{ sample.name }}</span>
+              <span class="text-sm">{{ sample.emoji }}</span>
+              <span class="truncate font-bold">{{ sample.name }}</span>
             </button>
           </div>
         </div>
@@ -119,96 +119,95 @@
         <button
           @click="runPrediction"
           :disabled="!selectedImagePreview || isLoading"
-          class="w-full py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-xl shadow-indigo-500/25 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+          class="w-full py-3.5 rounded-xl font-extrabold text-xs sm:text-sm bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center space-x-2"
         >
-          <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
-          <ScanSearch v-else class="w-5 h-5" />
-          <span>{{ isLoading ? 'Đang Suy Luận Mô Hình...' : 'Phân Loại & Xuất Grad-CAM' }}</span>
+          <Loader2 v-if="isLoading" class="w-4 h-4 animate-spin" />
+          <ScanSearch v-else class="w-4 h-4" />
+          <span>{{ isLoading ? 'Đang Chạy Mô Hình...' : 'Phân Loại & Xuất Grad-CAM' }}</span>
         </button>
 
       </div>
 
       <!-- Right Column: Results & Grad-CAM Panel -->
-      <div class="lg:col-span-7 space-y-6">
+      <div class="lg:col-span-7 space-y-4">
         
         <!-- Placeholder when no result -->
-        <div v-if="!result && !isLoading" class="glass-panel p-12 rounded-2xl border border-slate-800 text-center space-y-4">
-          <div class="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center text-slate-500 mx-auto">
-            <Activity class="w-8 h-8" />
+        <div v-if="!result && !isLoading" class="p-12 rounded-2xl border border-slate-300 bg-white text-center space-y-3 shadow-xs">
+          <div class="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 mx-auto">
+            <Activity class="w-6 h-6" />
           </div>
-          <h3 class="text-lg font-bold text-slate-300">Chưa Có Kết Quả Nhận Diện</h3>
-          <p class="text-xs text-slate-500 max-w-sm mx-auto">
-            Vui lòng chọn hoặc tải ảnh lên ở bảng bên trái và bấm nút <strong class="text-slate-400">"Phân Loại & Xuất Grad-CAM"</strong>
+          <h3 class="text-sm font-extrabold text-slate-900">Chưa Có Kết Quả Nhận Diện</h3>
+          <p class="text-xs text-slate-600 max-w-xs mx-auto font-medium">
+            Chọn hoặc tải ảnh lên ở bên trái và bấm nút <strong class="text-indigo-600 font-bold">"Phân Loại & Xuất Grad-CAM"</strong>
           </p>
         </div>
 
         <!-- Loading Skeleton -->
-        <div v-else-if="isLoading" class="glass-panel p-8 rounded-2xl border border-slate-800 space-y-6 animate-pulse">
-          <div class="h-8 bg-slate-800 rounded-lg w-1/3"></div>
-          <div class="h-24 bg-slate-800/60 rounded-xl"></div>
-          <div class="space-y-3">
-            <div class="h-4 bg-slate-800 rounded w-1/2"></div>
-            <div class="h-6 bg-slate-800/40 rounded"></div>
-            <div class="h-6 bg-slate-800/40 rounded"></div>
+        <div v-else-if="isLoading" class="p-6 rounded-2xl border border-indigo-200 bg-indigo-50/50 space-y-4 animate-pulse">
+          <div class="h-6 bg-indigo-200 rounded w-1/3"></div>
+          <div class="h-20 bg-indigo-100 rounded"></div>
+          <div class="space-y-2">
+            <div class="h-4 bg-indigo-200 rounded w-1/2"></div>
+            <div class="h-4 bg-indigo-100 rounded"></div>
           </div>
         </div>
 
         <!-- Active Prediction Result -->
-        <div v-else-if="result" class="space-y-6">
+        <div v-else-if="result" class="space-y-4">
           
           <!-- Primary Class Result Header -->
-          <div class="glass-panel p-6 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 relative overflow-hidden">
+          <div class="p-5 rounded-2xl border border-emerald-300 bg-emerald-50/90 relative overflow-hidden shadow-xs">
             <div class="flex items-start justify-between">
               <div>
-                <span class="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
-                  Top-1 Nhận Diện Nhiều Nhất
+                <span class="text-[11px] font-extrabold text-emerald-800 bg-white px-2.5 py-0.5 rounded border border-emerald-200 shadow-xs">
+                  Top-1 Dự Đoán Hàng Đầu
                 </span>
-                <h2 class="text-2xl sm:text-3xl font-black text-white mt-2">
+                <h2 class="text-2xl font-black text-slate-900 mt-1.5">
                   {{ CLASS_LABELS_VI[result.top_class] || result.top_class }}
                 </h2>
-                <p class="text-xs text-slate-400 mt-1">Mã Lớp: <code class="text-indigo-300">{{ result.top_class }}</code></p>
+                <p class="text-xs text-emerald-900 font-semibold mt-0.5">Mã Lớp: <code class="text-emerald-950 font-bold font-mono">{{ result.top_class }}</code></p>
               </div>
 
               <div class="text-right">
-                <div class="text-3xl font-black text-emerald-400">{{ result.top_confidence }}%</div>
-                <div class="text-[11px] text-slate-400 font-medium">Confidence Score</div>
+                <div class="text-3xl font-black text-emerald-700">{{ result.top_confidence }}%</div>
+                <div class="text-[11px] text-emerald-800 font-bold">Confidence Score</div>
               </div>
             </div>
           </div>
 
           <!-- Performance Quick Badge -->
           <div class="grid grid-cols-3 gap-3">
-            <div class="glass-panel p-3.5 rounded-xl border border-slate-800 text-center">
-              <div class="text-xs text-slate-400">Inference Time</div>
-              <div class="text-base font-extrabold text-indigo-400 mt-0.5">{{ result.inference_time_ms }} ms</div>
+            <div class="p-3 rounded-xl border border-indigo-200 bg-indigo-50/80 text-center shadow-xs">
+              <div class="text-[11px] text-indigo-900 font-bold">Inference Time</div>
+              <div class="text-base font-black text-indigo-700 mt-0.5 font-mono">{{ result.inference_time_ms }} ms</div>
             </div>
-            <div class="glass-panel p-3.5 rounded-xl border border-slate-800 text-center">
-              <div class="text-xs text-slate-400">Mô Hình Sử Dụng</div>
-              <div class="text-base font-extrabold text-purple-400 mt-0.5 uppercase">{{ result.model_used }}</div>
+            <div class="p-3 rounded-xl border border-purple-200 bg-purple-50/80 text-center shadow-xs">
+              <div class="text-[11px] text-purple-900 font-bold">Mô Hình</div>
+              <div class="text-base font-black text-purple-700 mt-0.5 uppercase font-mono">{{ result.model_used }}</div>
             </div>
-            <div class="glass-panel p-3.5 rounded-xl border border-slate-800 text-center">
-              <div class="text-xs text-slate-400">Input Size</div>
-              <div class="text-base font-extrabold text-emerald-400 mt-0.5">224 × 224</div>
+            <div class="p-3 rounded-xl border border-sky-200 bg-sky-50/80 text-center shadow-xs">
+              <div class="text-[11px] text-sky-900 font-bold">Input Size</div>
+              <div class="text-base font-black text-sky-700 mt-0.5 font-mono">224 × 224</div>
             </div>
           </div>
 
           <!-- Top-3 Confidence Breakdown -->
-          <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <BarChart3 class="w-4 h-4 text-indigo-400" />
+          <div class="p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+            <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+              <BarChart3 class="w-4 h-4 text-indigo-600" />
               <span>Top-3 Dự Đoán Hàng Đầu</span>
             </h3>
 
-            <div class="space-y-3">
-              <div v-for="(item, idx) in result.top_3" :key="idx" class="space-y-1.5">
-                <div class="flex justify-between text-xs font-semibold">
-                  <span class="text-slate-200">#{{ idx + 1 }} {{ CLASS_LABELS_VI[item.class_name] || item.class_name }}</span>
-                  <span :class="idx === 0 ? 'text-emerald-400 font-bold' : 'text-slate-400'">{{ item.confidence }}%</span>
+            <div class="space-y-2.5">
+              <div v-for="(item, idx) in result.top_3" :key="idx" class="space-y-1">
+                <div class="flex justify-between text-xs font-bold">
+                  <span class="text-slate-800">#{{ idx + 1 }} {{ CLASS_LABELS_VI[item.class_name] || item.class_name }}</span>
+                  <span :class="idx === 0 ? 'text-emerald-700 font-black' : 'text-slate-600'">{{ item.confidence }}%</span>
                 </div>
-                <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                   <div
-                    class="h-full rounded-full transition-all duration-500"
-                    :class="idx === 0 ? 'bg-gradient-to-r from-indigo-500 to-emerald-400' : 'bg-slate-700'"
+                    class="h-full rounded-full transition-all duration-300"
+                    :class="idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'"
                     :style="{ width: `${item.confidence}%` }"
                   ></div>
                 </div>
@@ -217,27 +216,27 @@
           </div>
 
           <!-- Grad-CAM Heatmap Visualization -->
-          <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="p-5 rounded-2xl border border-purple-200 bg-purple-50/50 space-y-3 shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                  <Eye class="w-4 h-4 text-purple-400" />
+                <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+                  <Eye class="w-4 h-4 text-purple-600" />
                   <span>Giải Thích Trực Quan Grad-CAM</span>
                 </h3>
-                <p class="text-xs text-slate-400">Bản đồ nhiệt thể hiện vùng ảnh mô hình tập trung chú ý</p>
+                <p class="text-[11px] text-slate-600 font-medium">Bản đồ nhiệt thể hiện vùng ảnh mô hình tập trung chú ý</p>
               </div>
 
               <!-- View Mode Tabs -->
-              <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center space-x-1">
+              <div class="bg-white p-1 rounded-xl border border-purple-200 flex items-center space-x-1 shadow-xs">
                 <button
                   v-for="mode in gradCamModes"
                   :key="mode.id"
                   @click="activeGradcamMode = mode.id"
                   :class="[
-                    'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all',
+                    'px-2.5 py-1 rounded-lg text-xs font-bold transition-all',
                     activeGradcamMode === mode.id
-                      ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-700 hover:bg-slate-100'
                   ]"
                 >
                   {{ mode.label }}
@@ -246,9 +245,8 @@
             </div>
 
             <!-- Image Comparison Box -->
-            <div class="relative h-64 sm:h-80 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+            <div class="relative h-60 sm:h-72 rounded-xl overflow-hidden bg-slate-900 border border-slate-300 flex items-center justify-center shadow-xs">
               
-              <!-- Original Image -->
               <img
                 v-if="activeGradcamMode === 'original'"
                 :src="selectedImagePreview!"
@@ -256,7 +254,6 @@
                 alt="Original"
               />
 
-              <!-- Heatmap Only -->
               <img
                 v-else-if="activeGradcamMode === 'heatmap'"
                 :src="result.gradcam_url"
@@ -264,7 +261,6 @@
                 alt="Heatmap"
               />
 
-              <!-- Overlay Mode (Original + Heatmap) -->
               <div v-else class="relative h-full w-full flex items-center justify-center">
                 <img :src="selectedImagePreview!" class="h-full w-full object-contain" alt="Original" />
                 <img
@@ -276,11 +272,11 @@
 
             </div>
 
-            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 text-[11px] text-slate-400 leading-relaxed flex items-start space-x-2">
-              <Info class="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+            <div class="bg-white p-3 rounded-xl border border-purple-200 text-[11px] text-purple-950 font-semibold leading-relaxed flex items-start space-x-2 shadow-xs">
+              <Info class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
               <span>
-                <strong>Giải thích Grad-CAM:</strong> Vùng đỏ/vàng trên bản đồ nhiệt biểu thị các đường nét đặc trưng 
-                (như chân ghế, tựa lưng, mặt bàn) mà mô hình dựa vào để đưa ra quyết định phân loại.
+                <strong>Giải thích Grad-CAM:</strong> Vùng sáng đỏ/vàng trên bản đồ nhiệt biểu thị các đường nét đặc trưng 
+                (như chân ghế, mặt bàn) mà mô hình dựa vào để đưa ra quyết định phân loại.
               </span>
             </div>
 
@@ -315,7 +311,7 @@ const selectedModel = ref('mobilenet_v2');
 const isLoading = ref(false);
 const result = ref<PredictionResult | null>(null);
 
-const activeGradcamMode = ref('overlay'); // 'overlay' | 'original' | 'heatmap'
+const activeGradcamMode = ref('overlay');
 
 const modelOptions = [
   { id: 'mobilenet_v2', label: 'MobileNetV2' },

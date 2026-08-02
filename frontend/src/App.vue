@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans">
+  <div class="min-h-screen bg-[#f1f5f9] text-slate-800 flex flex-col font-sans">
     
     <!-- Navigation Bar -->
     <Navbar :activeTab="currentTab" @navigate="handleNavigate" />

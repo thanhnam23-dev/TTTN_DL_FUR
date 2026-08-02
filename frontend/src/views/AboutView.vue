@@ -1,14 +1,14 @@
 <template>
-  <div class="space-y-8 py-4">
+  <div class="space-y-6 py-4">
     
     <!-- Header -->
-    <div class="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-2">
-      <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-400 text-xs font-semibold">
-        <Info class="w-3.5 h-3.5" />
+    <div class="glass-panel p-5 sm:p-6 rounded-xl border border-slate-200 bg-white space-y-1 shadow-xs">
+      <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-200">
+        <Info class="w-3.5 h-3.5 text-indigo-600" />
         <span>Thông Tin Đồ Án</span>
       </div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-white">Về Đề Tài Thực Tập Tốt Nghiệp</h1>
-      <p class="text-xs sm:text-sm text-slate-400">
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-900">Về Đề Tài Thực Tập Tốt Nghiệp</h1>
+      <p class="text-xs text-slate-500">
         Giới thiệu bộ dữ liệu, quy trình huấn luyện Fine-tuning và công nghệ sử dụng trong hệ thống
       </p>
     </div>
@@ -17,73 +17,73 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       
       <!-- Left: Dataset Info -->
-      <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-          <Database class="w-5 h-5 text-indigo-400" />
+      <div class="glass-panel p-5 rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <Database class="w-4 h-4 text-indigo-600" />
           <span>Bộ Dữ Liệu (Furniture Dataset)</span>
         </h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
+        <p class="text-xs text-slate-600 leading-relaxed">
           Bộ dữ liệu huấn luyện được thu thập từ Kaggle (Multi-Angle AI Training), gồm 10,364 ảnh nội thất 
           thuộc 6 lớp sản phẩm phổ biến, được làm sạch và phân chia theo tỷ lệ chuẩn 70% Train, 15% Validation, 15% Test.
         </p>
 
-        <div class="space-y-2 pt-2">
-          <div v-for="cls in classDetails" :key="cls.name" class="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-            <span class="font-bold text-white flex items-center gap-2">
+        <div class="space-y-2 pt-1">
+          <div v-for="cls in classDetails" :key="cls.name" class="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+            <span class="font-bold text-slate-900 flex items-center gap-2">
               <span>{{ cls.emoji }}</span>
               <span>{{ cls.name }}</span>
             </span>
-            <div class="flex items-center space-x-3 text-slate-400 font-mono">
-              <span>Tổng: <strong class="text-white">{{ cls.total }}</strong></span>
-              <span class="text-indigo-400">Train: {{ cls.train }}</span>
-              <span class="text-purple-400">Val: {{ cls.val }}</span>
-              <span class="text-emerald-400">Test: {{ cls.test }}</span>
+            <div class="flex items-center space-x-3 text-slate-600 font-mono">
+              <span>Tổng: <strong class="text-slate-900">{{ cls.total }}</strong></span>
+              <span class="text-indigo-600 font-semibold">Train: {{ cls.train }}</span>
+              <span class="text-purple-600 font-semibold">Val: {{ cls.val }}</span>
+              <span class="text-emerald-600 font-semibold">Test: {{ cls.test }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Right: Preprocessing & Training Methodology -->
-      <div class="space-y-6">
+      <div class="space-y-4">
         
         <!-- Preprocessing Card -->
-        <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <Sliders class="w-5 h-5 text-purple-400" />
+        <div class="glass-panel p-5 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-xs">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Sliders class="w-4 h-4 text-purple-600" />
             <span>Tiền Xử Lý & Data Augmentation</span>
           </h3>
-          <ul class="space-y-2 text-xs text-slate-300">
+          <ul class="space-y-2 text-xs text-slate-700">
             <li class="flex items-center gap-2">
-              <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
               <span><strong>Resize & Crop:</strong> Đưa ảnh về kích thước chuẩn 224 × 224 pixel.</span>
             </li>
             <li class="flex items-center gap-2">
-              <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
               <span><strong>Normalize ImageNet:</strong> Mean=[0.485, 0.456, 0.406], Std=[0.229, 0.224, 0.225].</span>
             </li>
             <li class="flex items-center gap-2">
-              <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-              <span><strong>Data Augmentation:</strong> Random Horizontal Flip, Rotation (15°), Color Jitter (Brightness/Contrast).</span>
+              <CheckCircle2 class="w-4 h-4 text-emerald-600 shrink-0" />
+              <span><strong>Data Augmentation:</strong> Random Horizontal Flip, Rotation (15°), Color Jitter.</span>
             </li>
           </ul>
         </div>
 
         <!-- 2-Stage Training Strategy Card -->
-        <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-3">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <Cpu class="w-5 h-5 text-emerald-400" />
+        <div class="glass-panel p-5 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-xs">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Cpu class="w-4 h-4 text-emerald-600" />
             <span>Quy Trình Fine-Tuning 2 Giai Đoạn</span>
           </h3>
           
-          <div class="space-y-3 text-xs">
-            <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <h4 class="font-bold text-indigo-300">Giai đoạn 1 (10 Epochs - Freeze Backbone):</h4>
-              <p class="text-slate-400 mt-1">Đóng băng toàn bộ các lớp backbone, chỉ huấn luyện lớp phân loại Fully Connected (FC Head) với Learning Rate = 1e-3 (Adam).</p>
+          <div class="space-y-2 text-xs">
+            <div class="p-3 rounded-lg bg-indigo-50/70 border border-indigo-200">
+              <h4 class="font-bold text-indigo-900">Giai đoạn 1 (10 Epochs - Freeze Backbone):</h4>
+              <p class="text-indigo-800 mt-0.5">Đóng băng các lớp backbone, chỉ huấn luyện lớp phân loại Fully Connected (FC Head) với LR = 1e-3.</p>
             </div>
 
-            <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <h4 class="font-bold text-purple-300">Giai đoạn 2 (20 Epochs - Unfreeze Full Model):</h4>
-              <p class="text-slate-400 mt-1">Mở đóng băng toàn bộ mô hình, tiến hành fine-tune sâu tất cả các layer với Learning Rate nhỏ = 1e-5 để tối ưu hóa đặc trưng.</p>
+            <div class="p-3 rounded-lg bg-purple-50/70 border border-purple-200">
+              <h4 class="font-bold text-purple-900">Giai đoạn 2 (20 Epochs - Unfreeze Full Model):</h4>
+              <p class="text-purple-800 mt-0.5">Mở đóng băng toàn bộ mô hình, fine-tune sâu tất cả các layer với LR = 1e-5 để tối ưu hóa đặc trưng.</p>
             </div>
           </div>
         </div>
@@ -93,14 +93,14 @@
     </div>
 
     <!-- Technologies Used Badge Section -->
-    <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-      <h3 class="text-lg font-bold text-white">Công Nghệ & Thư Viện Sử Dụng</h3>
+    <div class="glass-panel p-5 rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
+      <h3 class="text-base font-bold text-slate-900">Công Nghệ & Thư Viện Sử Dụng</h3>
       
-      <div class="flex flex-wrap gap-3">
-        <span v-for="t in techStack" :key="t.name" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center space-x-2 text-xs font-semibold text-slate-200">
-          <span class="text-base">{{ t.icon }}</span>
+      <div class="flex flex-wrap gap-2.5">
+        <span v-for="t in techStack" :key="t.name" class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center space-x-2 text-xs font-bold text-slate-800">
+          <span>{{ t.icon }}</span>
           <span>{{ t.name }}</span>
-          <span class="text-[10px] text-indigo-400 font-mono">({{ t.role }})</span>
+          <span class="text-[10px] text-indigo-600 font-mono">({{ t.role }})</span>
         </span>
       </div>
     </div>
