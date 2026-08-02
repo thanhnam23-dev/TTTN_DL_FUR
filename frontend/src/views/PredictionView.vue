@@ -90,16 +90,16 @@
           </div>
         </div>
 
-        <!-- Sample Presets -->
-        <div class="p-4 rounded-2xl border border-sky-200 bg-sky-50/70 space-y-2.5 shadow-xs">
+        <!-- Sample Presets for 6 Furniture Classes -->
+        <div class="p-4 rounded-2xl border border-sky-200 bg-sky-50/70 space-y-3 shadow-xs">
           <p class="text-xs font-extrabold text-sky-900 flex items-center gap-1.5">
             <Sparkles class="w-3.5 h-3.5 text-sky-600" />
-            <span>Ảnh mẫu kiểm thử nhanh (Bấm chọn thử):</span>
+            <span>Ảnh mẫu 6 lớp sản phẩm nội thất chuẩn:</span>
           </p>
 
           <div class="grid grid-cols-3 gap-2">
             <button
-              v-for="sample in sampleImages"
+              v-for="sample in furnitureSamples"
               :key="sample.id"
               @click="selectSampleImage(sample)"
               :class="[
@@ -112,6 +112,31 @@
               <span class="text-sm">{{ sample.emoji }}</span>
               <span class="truncate font-bold">{{ sample.name }}</span>
             </button>
+          </div>
+
+          <!-- OOD Exception Test Presets -->
+          <div class="pt-2 border-t border-sky-200/80 space-y-2">
+            <p class="text-[11px] font-extrabold text-amber-900 flex items-center gap-1.5">
+              <AlertTriangle class="w-3.5 h-3.5 text-amber-600" />
+              <span>Ảnh kiểm thử ngoại lệ (Không phải nội thất):</span>
+            </p>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="sample in exceptionSamples"
+                :key="sample.id"
+                @click="selectSampleImage(sample)"
+                :class="[
+                  'p-2 rounded-xl border text-left text-xs transition-all flex items-center space-x-1.5 shadow-xs',
+                  selectedSampleId === sample.id
+                    ? 'border-amber-600 bg-amber-600 text-white font-extrabold'
+                    : 'border-amber-200 bg-white text-amber-900 hover:border-amber-300 font-semibold'
+                ]"
+              >
+                <span class="text-sm">{{ sample.emoji }}</span>
+                <span class="truncate font-bold">{{ sample.name }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -155,22 +180,49 @@
         <!-- Active Prediction Result -->
         <div v-else-if="result" class="space-y-4">
           
+          <!-- Out-of-Distribution (OOD) Warning Banner -->
+          <div v-if="!result.is_valid_furniture" class="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 space-y-1.5 shadow-xs">
+            <div class="flex items-center gap-2 font-extrabold text-xs sm:text-sm text-amber-900">
+              <AlertTriangle class="w-5 h-5 text-amber-600 shrink-0" />
+              <span>⚠️ CẢNH BÁO NGOẠI LỆ: ẢNH KHÔNG PHẢI ĐỒ NỘI THẤT HỢP LỆ</span>
+            </div>
+            <p class="text-xs text-amber-800 font-semibold leading-relaxed pl-7">
+              {{ result.warning_message || 'Hình ảnh tải lên có độ tin cậy thấp (< 80.0%) hoặc chênh lệch lớp nhỏ, không thuộc 6 danh mục sản phẩm nội thất của hệ thống.' }}
+            </p>
+          </div>
+
           <!-- Primary Class Result Header -->
-          <div class="p-5 rounded-2xl border border-emerald-300 bg-emerald-50/90 relative overflow-hidden shadow-xs">
+          <div :class="[
+            'p-5 rounded-2xl border relative overflow-hidden shadow-xs',
+            result.is_valid_furniture
+              ? 'border-emerald-300 bg-emerald-50/90'
+              : 'border-amber-300 bg-amber-50/60'
+          ]">
             <div class="flex items-start justify-between">
               <div>
-                <span class="text-[11px] font-extrabold text-emerald-800 bg-white px-2.5 py-0.5 rounded border border-emerald-200 shadow-xs">
-                  Top-1 Dự Đoán Hàng Đầu
+                <span :class="[
+                  'text-[11px] font-extrabold px-2.5 py-0.5 rounded border shadow-xs',
+                  result.is_valid_furniture
+                    ? 'text-emerald-800 bg-white border-emerald-200'
+                    : 'text-amber-800 bg-white border-amber-200'
+                ]">
+                  {{ result.is_valid_furniture ? 'Top-1 Dự Đoán Hàng Đầu' : 'Lớp Gần Nhất (Không Khả Thi)' }}
                 </span>
                 <h2 class="text-2xl font-black text-slate-900 mt-1.5">
                   {{ CLASS_LABELS_VI[result.top_class] || result.top_class }}
                 </h2>
-                <p class="text-xs text-emerald-900 font-semibold mt-0.5">Mã Lớp: <code class="text-emerald-950 font-bold font-mono">{{ result.top_class }}</code></p>
+                <p class="text-xs font-semibold mt-0.5" :class="result.is_valid_furniture ? 'text-emerald-900' : 'text-amber-900'">
+                  Mã Lớp: <code class="font-bold font-mono">{{ result.top_class }}</code>
+                </p>
               </div>
 
               <div class="text-right">
-                <div class="text-3xl font-black text-emerald-700">{{ result.top_confidence }}%</div>
-                <div class="text-[11px] text-emerald-800 font-bold">Confidence Score</div>
+                <div :class="['text-3xl font-black', result.is_valid_furniture ? 'text-emerald-700' : 'text-amber-700']">
+                  {{ result.top_confidence }}%
+                </div>
+                <div class="text-[11px] font-bold" :class="result.is_valid_furniture ? 'text-emerald-800' : 'text-amber-800'">
+                  Confidence Score
+                </div>
               </div>
             </div>
           </div>
@@ -202,12 +254,14 @@
               <div v-for="(item, idx) in result.top_3" :key="idx" class="space-y-1">
                 <div class="flex justify-between text-xs font-bold">
                   <span class="text-slate-800">#{{ idx + 1 }} {{ CLASS_LABELS_VI[item.class_name] || item.class_name }}</span>
-                  <span :class="idx === 0 ? 'text-emerald-700 font-black' : 'text-slate-600'">{{ item.confidence }}%</span>
+                  <span :class="idx === 0 ? (result.is_valid_furniture ? 'text-emerald-700 font-black' : 'text-amber-700 font-black') : 'text-slate-600'">
+                    {{ item.confidence }}%
+                  </span>
                 </div>
                 <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                   <div
                     class="h-full rounded-full transition-all duration-300"
-                    :class="idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'"
+                    :class="idx === 0 ? (result.is_valid_furniture ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-300'"
                     :style="{ width: `${item.confidence}%` }"
                   ></div>
                 </div>
@@ -295,7 +349,7 @@
 import { ref } from 'vue';
 import {
   ScanSearch, Upload, UploadCloud, Trash2, Cpu, Sparkles,
-  BarChart3, Eye, Info, Activity, Loader2
+  BarChart3, Eye, Info, Activity, Loader2, AlertTriangle
 } from 'lucide-vue-next';
 import {
   predictFurnitureImage, CLASS_LABELS_VI, type PredictionResult
@@ -325,13 +379,20 @@ const gradCamModes = [
   { id: 'original', label: 'Ảnh Gốc' }
 ];
 
-const sampleImages = [
+// 6 lớp sản phẩm nội thất chuẩn
+const furnitureSamples = [
   { id: 'bar_stool', name: 'Ghế Bar', emoji: '🪑', url: 'https://images.unsplash.com/photo-1503602642458-232111445657?w=400&auto=format&fit=crop&q=80' },
-  { id: 'bed', name: 'Giường Ngủ', emoji: '🛏️', url: 'https://images.unsplash.com/photo-1540518614846-7ede433c5173?w=400&auto=format&fit=crop&q=80' },
+  { id: 'bed', name: 'Giường Ngủ', emoji: '🛏️', url: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400&auto=format&fit=crop&q=80' },
   { id: 'chair', name: 'Ghế Tựa', emoji: '🛋️', url: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400&auto=format&fit=crop&q=80' },
   { id: 'coffee_table', name: 'Bàn Trà', emoji: '☕', url: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400&auto=format&fit=crop&q=80' },
   { id: 'dining_table', name: 'Bàn Ăn', emoji: '🍽️', url: 'https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?w=400&auto=format&fit=crop&q=80' },
   { id: 'dresser', name: 'Tủ Đồ', emoji: '🗄️', url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400&auto=format&fit=crop&q=80' },
+];
+
+// Nút kiểm thử ngoại lệ
+const exceptionSamples = [
+  { id: 'other_car', name: 'Xe Ô Tô (Ngoại Lệ)', emoji: '🚗', url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&auto=format&fit=crop&q=80' },
+  { id: 'other_person', name: 'Ảnh Người (Ngoại Lệ)', emoji: '👤', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80' },
 ];
 
 function triggerFileInput() {
@@ -360,7 +421,7 @@ function handleDrop(e: DragEvent) {
   }
 }
 
-function selectSampleImage(sample: typeof sampleImages[0]) {
+function selectSampleImage(sample: { id: string; name: string; emoji: string; url: string }) {
   selectedSampleId.value = sample.id;
   selectedFile.value = sample.url;
   selectedImagePreview.value = sample.url;

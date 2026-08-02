@@ -5,6 +5,8 @@ export interface PredictionResult {
   model_used: string;
   top_3: Array<{ class_name: string; confidence: number }>;
   gradcam_url: string;
+  is_valid_furniture: boolean;
+  warning_message?: string;
 }
 
 export interface ModelMetrics {
@@ -87,6 +89,7 @@ export async function predictFurnitureImage(
 
   const classes = ['chair', 'bed', 'bar_stool', 'coffee_table', 'dining_table', 'dresser'];
   let chosenClass = 'chair';
+  let isNonFurniture = false;
   
   if (typeof file === 'string') {
     const lower = file.toLowerCase();
@@ -96,6 +99,9 @@ export async function predictFurnitureImage(
     else if (lower.includes('dining')) chosenClass = 'dining_table';
     else if (lower.includes('dresser')) chosenClass = 'dresser';
     else if (lower.includes('chair')) chosenClass = 'chair';
+    else if (lower.includes('dog') || lower.includes('cat') || lower.includes('car') || lower.includes('person') || lower.includes('people') || lower.includes('human') || lower.includes('other')) {
+      isNonFurniture = true;
+    }
   } else {
     const lower = file.name.toLowerCase();
     if (lower.includes('bed')) chosenClass = 'bed';
@@ -104,11 +110,17 @@ export async function predictFurnitureImage(
     else if (lower.includes('dining')) chosenClass = 'dining_table';
     else if (lower.includes('dresser')) chosenClass = 'dresser';
     else if (lower.includes('chair')) chosenClass = 'chair';
-    else chosenClass = classes[Math.floor(Math.random() * classes.length)];
+    else if (lower.includes('dog') || lower.includes('cat') || lower.includes('car') || lower.includes('person') || lower.includes('people') || lower.includes('human') || lower.includes('other')) {
+      isNonFurniture = true;
+    }
   }
 
-  const conf1 = 0.94 + Math.random() * 0.05;
-  const conf2 = (1 - conf1) * 0.7;
+  let conf1 = 0.94 + Math.random() * 0.05;
+  if (isNonFurniture) {
+    conf1 = 0.55 + Math.random() * 0.15; // Confidence < 80% for non-furniture
+  }
+
+  const conf2 = (1 - conf1) * 0.6;
   const conf3 = 1 - conf1 - conf2;
 
   const otherClasses = classes.filter(c => c !== chosenClass);
@@ -119,17 +131,22 @@ export async function predictFurnitureImage(
   if (modelName === 'resnet18') simInferenceTime = 38;
   if (modelName === 'efficientnet_b0') simInferenceTime = 46;
 
+  const top1_percent = Number((conf1 * 100).toFixed(2));
+  const isValid = top1_percent >= 80.0;
+
   return {
     top_class: chosenClass,
-    top_confidence: Number((conf1 * 100).toFixed(2)),
+    top_confidence: top1_percent,
     inference_time_ms: simInferenceTime,
     model_used: modelName,
     top_3: [
-      { class_name: chosenClass, confidence: Number((conf1 * 100).toFixed(2)) },
+      { class_name: chosenClass, confidence: top1_percent },
       { class_name: secondClass, confidence: Number((conf2 * 100).toFixed(2)) },
       { class_name: thirdClass, confidence: Number((conf3 * 100).toFixed(2)) }
     ],
-    gradcam_url: generateGradCamDataUrl()
+    gradcam_url: generateGradCamDataUrl(),
+    is_valid_furniture: isValid,
+    warning_message: isValid ? undefined : `Hình ảnh không được nhận diện là sản phẩm nội thất hợp lệ (Độ tin cậy Top-1: ${top1_percent}% < 80.0%).`
   };
 }
 

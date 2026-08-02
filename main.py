@@ -25,14 +25,12 @@ BASE_DIR = Path(r"S:\Thực tập tốt nghiệp")
 WEIGHTS_DIR = BASE_DIR / "weights"
 LOGS_DIR = BASE_DIR / "logs"
 
-# App initialization
 app = FastAPI(
     title="Furniture Classification AI API",
     description="FastAPI Backend for Furniture Classification & Grad-CAM Visualization",
     version="1.0.0"
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -45,14 +43,16 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['bar_stool', 'bed', 'chair', 'coffee_table', 'dining_table', 'dresser']
 NUM_CLASSES = len(CLASS_NAMES)
 
-# Preprocessing transform
+# Out-of-Distribution (OOD) Confidence & Margin Thresholds (Tăng lên 80% & Margin 25% để loại bỏ triệt để ảnh người/ngoại lệ)
+CONFIDENCE_THRESHOLD = 80.0  # Ngưỡng tin cậy tối thiểu 80%
+MARGIN_THRESHOLD = 25.0      # Chênh lệch tối thiểu giữa Top-1 và Top-2 phải >= 25%
+
 eval_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# Global model cache
 MODEL_CACHE: Dict[str, nn.Module] = {}
 
 def load_model(model_name: str) -> nn.Module:
@@ -220,6 +220,19 @@ async def predict(
 
     top_class = top3_results[0]["class_name"]
     top_confidence = top3_results[0]["confidence"]
+    second_confidence = top3_results[1]["confidence"]
+    margin = top_confidence - second_confidence
+
+    # Out-of-Distribution (OOD) Exception Checking với ngưỡng 80% & Margin 25%
+    is_valid_furniture = True
+    warning_message = None
+
+    if top_confidence < CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD:
+        is_valid_furniture = False
+        warning_message = (
+            f"Hình ảnh không được nhận diện là sản phẩm nội thất hợp lệ "
+            f"(Độ tin cậy Top-1: {top_confidence:.1f}% < {CONFIDENCE_THRESHOLD}% hoặc chênh lệch Top 1-2 nhỏ)."
+        )
 
     # Grad-CAM computation
     grad_cam_engine = GradCAM(net, target_layer)
@@ -233,7 +246,9 @@ async def predict(
         "inference_time_ms": inference_time_ms,
         "model_used": model,
         "top_3": top3_results,
-        "gradcam_url": gradcam_b64
+        "gradcam_url": gradcam_b64,
+        "is_valid_furniture": is_valid_furniture,
+        "warning_message": warning_message
     })
 
 if __name__ == "__main__":
