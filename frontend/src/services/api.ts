@@ -27,10 +27,10 @@ export const CLASS_LABELS_VI: Record<string, string> = {
   chair: 'Ghế tựa (Chair)',
   coffee_table: 'Bàn trà (Coffee Table)',
   dining_table: 'Bàn ăn (Dining Table)',
-  dresser: 'Tủ trang điểm (Dresser)'
+  dresser: 'Tủ trang điểm (Dresser)',
+  non_furniture: 'Không phải sản phẩm nội thất'
 };
 
-// Generate realistic SVG Grad-CAM simulation for demo mode
 export function generateGradCamDataUrl(): string {
   const canvas = document.createElement('canvas');
   canvas.width = 300;
@@ -117,7 +117,7 @@ export async function predictFurnitureImage(
 
   let conf1 = 0.94 + Math.random() * 0.05;
   if (isNonFurniture) {
-    conf1 = 0.55 + Math.random() * 0.15; // Confidence < 80% for non-furniture
+    conf1 = 0.32 + Math.random() * 0.12; // Confidence < 50% for non-furniture
   }
 
   const conf2 = (1 - conf1) * 0.6;
@@ -132,50 +132,50 @@ export async function predictFurnitureImage(
   if (modelName === 'efficientnet_b0') simInferenceTime = 46;
 
   const top1_percent = Number((conf1 * 100).toFixed(2));
-  const isValid = top1_percent >= 80.0;
+  const isValid = top1_percent >= 50.0;
 
   return {
-    top_class: chosenClass,
+    top_class: isValid ? chosenClass : 'non_furniture',
     top_confidence: top1_percent,
     inference_time_ms: simInferenceTime,
     model_used: modelName,
-    top_3: [
+    top_3: isValid ? [
       { class_name: chosenClass, confidence: top1_percent },
       { class_name: secondClass, confidence: Number((conf2 * 100).toFixed(2)) },
       { class_name: thirdClass, confidence: Number((conf3 * 100).toFixed(2)) }
-    ],
+    ] : [],
     gradcam_url: generateGradCamDataUrl(),
     is_valid_furniture: isValid,
-    warning_message: isValid ? undefined : `Hình ảnh không được nhận diện là sản phẩm nội thất hợp lệ (Độ tin cậy Top-1: ${top1_percent}% < 80.0%).`
+    warning_message: isValid ? undefined : `Hình ảnh tải lên không thuộc 6 danh mục sản phẩm nội thất của hệ thống (Độ tin cậy quá thấp: ${top1_percent}% < 50.0%).`
   };
 }
 
 export const MOCK_MODEL_COMPARISON: ModelMetrics[] = [
   {
     Model: 'MobileNetV2',
-    Acc: 0.9240,
-    Prec: 0.9255,
-    Recall: 0.9240,
-    F1: 0.9242,
-    RocAuc: 0.9892,
-    PrAuc: 0.9785
+    Acc: 0.9455,
+    Prec: 0.9445,
+    Recall: 0.9455,
+    F1: 0.9443,
+    RocAuc: 0.9961,
+    PrAuc: 0.9754
   },
   {
     Model: 'ResNet18',
-    Acc: 0.9415,
+    Acc: 0.9448,
     Prec: 0.9428,
-    Recall: 0.9415,
-    F1: 0.9418,
-    RocAuc: 0.9931,
-    PrAuc: 0.9842
+    Recall: 0.9448,
+    F1: 0.9429,
+    RocAuc: 0.9958,
+    PrAuc: 0.9756
   },
   {
     Model: 'EfficientNet-B0',
-    Acc: 0.9582,
-    Prec: 0.9590,
-    Recall: 0.9582,
-    F1: 0.9584,
-    RocAuc: 0.9964,
-    PrAuc: 0.9910
+    Acc: 0.9416,
+    Prec: 0.9397,
+    Recall: 0.9416,
+    F1: 0.9403,
+    RocAuc: 0.9963,
+    PrAuc: 0.9757
   }
 ];

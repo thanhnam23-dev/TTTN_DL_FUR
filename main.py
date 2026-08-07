@@ -20,8 +20,8 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Config paths
-BASE_DIR = Path(r"S:\Thực tập tốt nghiệp")
+# Config paths dynamically relative to main.py
+BASE_DIR = Path(__file__).parent.resolve()
 WEIGHTS_DIR = BASE_DIR / "weights"
 LOGS_DIR = BASE_DIR / "logs"
 
@@ -43,9 +43,9 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['bar_stool', 'bed', 'chair', 'coffee_table', 'dining_table', 'dresser']
 NUM_CLASSES = len(CLASS_NAMES)
 
-# Out-of-Distribution (OOD) Confidence & Margin Thresholds (Tăng lên 80% & Margin 25% để loại bỏ triệt để ảnh người/ngoại lệ)
-CONFIDENCE_THRESHOLD = 80.0  # Ngưỡng tin cậy tối thiểu 80%
-MARGIN_THRESHOLD = 25.0      # Chênh lệch tối thiểu giữa Top-1 và Top-2 phải >= 25%
+# Out-of-Distribution (OOD) Confidence & Margin Thresholds
+CONFIDENCE_THRESHOLD = 50.0  # Ngưỡng tin cậy tối thiểu 50%
+MARGIN_THRESHOLD = 15.0      # Chênh lệch tối thiểu giữa Top-1 và Top-2 phải >= 15%
 
 eval_transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -78,10 +78,12 @@ def load_model(model_name: str) -> nn.Module:
 
     weight_path = WEIGHTS_DIR / f"{model_name}.pth"
     if weight_path.exists():
-        print(f"[INFO] Found fine-tuned weights at {weight_path.name}. Loading state_dict...")
-        model.load_state_dict(torch.load(weight_path, map_location=DEVICE))
+        print(f"[INFO] Found fine-tuned weights at {weight_path}. Loading state_dict...")
+        state_dict = torch.load(weight_path, map_location=DEVICE)
+        model.load_state_dict(state_dict)
+        print(f"[SUCCESS] Loaded fine-tuned weights for {model_name} successfully!")
     else:
-        print(f"[INFO] No local weights found at {weight_path.name}. Using default pre-trained backbone.")
+        print(f"[WARNING] Local weights NOT found at {weight_path}. Model classification head is UNTRAINED!")
 
     model = model.to(DEVICE)
     model.eval()
@@ -175,9 +177,9 @@ def get_metrics():
         return df.to_dict(orient="records")
     else:
         return [
-            {"Model": "MobileNetV2", "Acc.": 0.9240, "Prec.": 0.9255, "Recall": 0.9240, "F1": 0.9242, "ROC-AUC": 0.9892, "PR-AUC": 0.9785},
-            {"Model": "ResNet18", "Acc.": 0.9415, "Prec.": 0.9428, "Recall": 0.9415, "F1": 0.9418, "ROC-AUC": 0.9931, "PR-AUC": 0.9842},
-            {"Model": "EfficientNet-B0", "Acc.": 0.9582, "Prec.": 0.9590, "Recall": 0.9582, "F1": 0.9584, "ROC-AUC": 0.9964, "PR-AUC": 0.9910}
+            {"Model": "MobileNetV2", "Acc.": 0.9455, "Prec.": 0.9445, "Recall": 0.9455, "F1": 0.9443, "ROC-AUC": 0.9961, "PR-AUC": 0.9754},
+            {"Model": "ResNet18", "Acc.": 0.9448, "Prec.": 0.9428, "Recall": 0.9448, "F1": 0.9429, "ROC-AUC": 0.9958, "PR-AUC": 0.9756},
+            {"Model": "EfficientNet-B0", "Acc.": 0.9416, "Prec.": 0.9397, "Recall": 0.9416, "F1": 0.9403, "ROC-AUC": 0.9963, "PR-AUC": 0.9757}
         ]
 
 @app.post("/predict")
@@ -211,28 +213,35 @@ async def predict(
 
     # Get Top-3
     top3_prob, top3_indices = torch.topk(probs, k=3)
-    top3_results = []
+    raw_top3_results = []
     for p, idx in zip(top3_prob, top3_indices):
-        top3_results.append({
+        raw_top3_results.append({
             "class_name": CLASS_NAMES[idx.item()],
             "confidence": round(p.item() * 100, 2)
         })
 
-    top_class = top3_results[0]["class_name"]
-    top_confidence = top3_results[0]["confidence"]
-    second_confidence = top3_results[1]["confidence"]
-    margin = top_confidence - second_confidence
+    raw_top_class = raw_top3_results[0]["class_name"]
+    raw_top_confidence = raw_top3_results[0]["confidence"]
+    second_confidence = raw_top3_results[1]["confidence"]
+    margin = raw_top_confidence - second_confidence
 
-    # Out-of-Distribution (OOD) Exception Checking với ngưỡng 80% & Margin 25%
+    # Out-of-Distribution (OOD) Exception Checking
     is_valid_furniture = True
     warning_message = None
 
-    if top_confidence < CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD:
+    if raw_top_confidence < CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD:
         is_valid_furniture = False
         warning_message = (
-            f"Hình ảnh không được nhận diện là sản phẩm nội thất hợp lệ "
-            f"(Độ tin cậy Top-1: {top_confidence:.1f}% < {CONFIDENCE_THRESHOLD}% hoặc chênh lệch Top 1-2 nhỏ)."
+            f"Hình ảnh không thuộc 6 danh mục sản phẩm nội thất của hệ thống "
+            f"(Độ tin cậy thấp: {raw_top_confidence:.1f}% < {CONFIDENCE_THRESHOLD}%)."
         )
+        top_class = "non_furniture"
+        top_confidence = raw_top_confidence
+        top_3 = []  # Ẩn danh sách Top-1-2-3 khi không phải đồ nội thất để tránh mâu thuẫn logic
+    else:
+        top_class = raw_top_class
+        top_confidence = raw_top_confidence
+        top_3 = raw_top3_results
 
     # Grad-CAM computation
     grad_cam_engine = GradCAM(net, target_layer)
@@ -245,7 +254,7 @@ async def predict(
         "top_confidence": top_confidence,
         "inference_time_ms": inference_time_ms,
         "model_used": model,
-        "top_3": top3_results,
+        "top_3": top_3,
         "gradcam_url": gradcam_b64,
         "is_valid_furniture": is_valid_furniture,
         "warning_message": warning_message

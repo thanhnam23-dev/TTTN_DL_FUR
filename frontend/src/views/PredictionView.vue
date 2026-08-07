@@ -180,47 +180,42 @@
         <!-- Active Prediction Result -->
         <div v-else-if="result" class="space-y-4">
           
-          <!-- Out-of-Distribution (OOD) Warning Banner -->
-          <div v-if="!result.is_valid_furniture" class="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 space-y-1.5 shadow-xs">
-            <div class="flex items-center gap-2 font-extrabold text-xs sm:text-sm text-amber-900">
+          <!-- Out-of-Distribution (OOD) Warning Banner (Khi ảnh KHÔNG phải đồ nội thất) -->
+          <div v-if="!result.is_valid_furniture" class="p-5 rounded-2xl border border-amber-300 bg-amber-50/90 text-amber-950 space-y-2 shadow-xs">
+            <div class="flex items-center gap-2 font-extrabold text-sm text-amber-900">
               <AlertTriangle class="w-5 h-5 text-amber-600 shrink-0" />
               <span>⚠️ CẢNH BÁO NGOẠI LỆ: ẢNH KHÔNG PHẢI ĐỒ NỘI THẤT HỢP LỆ</span>
             </div>
             <p class="text-xs text-amber-800 font-semibold leading-relaxed pl-7">
-              {{ result.warning_message || 'Hình ảnh tải lên có độ tin cậy thấp (< 80.0%) hoặc chênh lệch lớp nhỏ, không thuộc 6 danh mục sản phẩm nội thất của hệ thống.' }}
+              {{ result.warning_message || 'Hình ảnh tải lên không thuộc 6 danh mục sản phẩm nội thất của hệ thống (Độ tin cậy quá thấp).' }}
             </p>
+            <div class="pl-7 pt-1 flex items-center gap-2 text-[11px] text-amber-900 font-bold">
+              <span>Độ tin cậy cao nhất: <code class="font-mono bg-white px-2 py-0.5 rounded border border-amber-200 text-rose-600 font-black">{{ result.top_confidence }}%</code></span>
+              <span>•</span>
+              <span class="text-slate-600">Đã tự động ẩn danh sách Top-1-2-3 để tránh mâu thuẫn kết quả</span>
+            </div>
           </div>
 
-          <!-- Primary Class Result Header -->
-          <div :class="[
-            'p-5 rounded-2xl border relative overflow-hidden shadow-xs',
-            result.is_valid_furniture
-              ? 'border-emerald-300 bg-emerald-50/90'
-              : 'border-amber-300 bg-amber-50/60'
-          ]">
+          <!-- Primary Class Result Header (CHỈ hiển thị khi ảnh hợp lệ) -->
+          <div v-if="result.is_valid_furniture" class="p-5 rounded-2xl border border-emerald-300 bg-emerald-50/90 relative overflow-hidden shadow-xs">
             <div class="flex items-start justify-between">
               <div>
-                <span :class="[
-                  'text-[11px] font-extrabold px-2.5 py-0.5 rounded border shadow-xs',
-                  result.is_valid_furniture
-                    ? 'text-emerald-800 bg-white border-emerald-200'
-                    : 'text-amber-800 bg-white border-amber-200'
-                ]">
-                  {{ result.is_valid_furniture ? 'Top-1 Dự Đoán Hàng Đầu' : 'Lớp Gần Nhất (Không Khả Thi)' }}
+                <span class="text-[11px] font-extrabold text-emerald-800 bg-white px-2.5 py-0.5 rounded border border-emerald-200 shadow-xs">
+                  Top-1 Dự Đoán Hàng Đầu
                 </span>
                 <h2 class="text-2xl font-black text-slate-900 mt-1.5">
                   {{ CLASS_LABELS_VI[result.top_class] || result.top_class }}
                 </h2>
-                <p class="text-xs font-semibold mt-0.5" :class="result.is_valid_furniture ? 'text-emerald-900' : 'text-amber-900'">
-                  Mã Lớp: <code class="font-bold font-mono">{{ result.top_class }}</code>
+                <p class="text-xs text-emerald-900 font-semibold mt-0.5">
+                  Mã Lớp: <code class="font-bold font-mono text-emerald-950">{{ result.top_class }}</code>
                 </p>
               </div>
 
               <div class="text-right">
-                <div :class="['text-3xl font-black', result.is_valid_furniture ? 'text-emerald-700' : 'text-amber-700']">
+                <div class="text-3xl font-black text-emerald-700">
                   {{ result.top_confidence }}%
                 </div>
-                <div class="text-[11px] font-bold" :class="result.is_valid_furniture ? 'text-emerald-800' : 'text-amber-800'">
+                <div class="text-[11px] font-bold text-emerald-800">
                   Confidence Score
                 </div>
               </div>
@@ -243,8 +238,8 @@
             </div>
           </div>
 
-          <!-- Top-3 Confidence Breakdown -->
-          <div class="p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+          <!-- Top-3 Confidence Breakdown (CHỈ hiển thị khi có kết quả Top-3 hợp lệ) -->
+          <div v-if="result.is_valid_furniture && result.top_3 && result.top_3.length > 0" class="p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
             <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
               <BarChart3 class="w-4 h-4 text-indigo-600" />
               <span>Top-3 Dự Đoán Hàng Đầu</span>
@@ -254,14 +249,14 @@
               <div v-for="(item, idx) in result.top_3" :key="idx" class="space-y-1">
                 <div class="flex justify-between text-xs font-bold">
                   <span class="text-slate-800">#{{ idx + 1 }} {{ CLASS_LABELS_VI[item.class_name] || item.class_name }}</span>
-                  <span :class="idx === 0 ? (result.is_valid_furniture ? 'text-emerald-700 font-black' : 'text-amber-700 font-black') : 'text-slate-600'">
+                  <span :class="idx === 0 ? 'text-emerald-700 font-black' : 'text-slate-600'">
                     {{ item.confidence }}%
                   </span>
                 </div>
                 <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                   <div
                     class="h-full rounded-full transition-all duration-300"
-                    :class="idx === 0 ? (result.is_valid_furniture ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-300'"
+                    :class="idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'"
                     :style="{ width: `${item.confidence}%` }"
                   ></div>
                 </div>
