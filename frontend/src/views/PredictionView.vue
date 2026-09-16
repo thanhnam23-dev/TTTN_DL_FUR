@@ -117,7 +117,6 @@
           <!-- OOD Exception Test Presets -->
           <div class="pt-2 border-t border-sky-200/80 space-y-2">
             <p class="text-[11px] font-extrabold text-amber-900 flex items-center gap-1.5">
-              <AlertTriangle class="w-3.5 h-3.5 text-amber-600" />
               <span>Ảnh kiểm thử ngoại lệ (Không phải nội thất):</span>
             </p>
 
@@ -180,20 +179,14 @@
         <!-- Active Prediction Result -->
         <div v-else-if="result" class="space-y-4">
           
-          <!-- Out-of-Distribution (OOD) Warning Banner (Khi ảnh KHÔNG phải đồ nội thất) -->
-          <div v-if="!result.is_valid_furniture" class="p-5 rounded-2xl border border-amber-300 bg-amber-50/90 text-amber-950 space-y-2 shadow-xs">
-            <div class="flex items-center gap-2 font-extrabold text-sm text-amber-900">
-              <AlertTriangle class="w-5 h-5 text-amber-600 shrink-0" />
-              <span>⚠️ CẢNH BÁO NGOẠI LỆ: ẢNH KHÔNG PHẢI ĐỒ NỘI THẤT HỢP LỆ</span>
-            </div>
-            <p class="text-xs text-amber-800 font-semibold leading-relaxed pl-7">
-              {{ result.warning_message || 'Hình ảnh tải lên không thuộc 6 danh mục sản phẩm nội thất của hệ thống (Độ tin cậy quá thấp).' }}
+          <!-- Minimalist Clean OOD Exception Warning Banner -->
+          <div v-if="!result.is_valid_furniture" class="p-5 rounded-2xl border border-amber-300 bg-amber-50 text-amber-950 space-y-2 shadow-xs">
+            <h3 class="text-sm font-black text-amber-900 tracking-wide">
+              CẢNH BÁO NGOẠI LỆ: ẢNH KHÔNG PHẢI ĐỒ NỘI THẤT HỢP LỆ
+            </h3>
+            <p class="text-xs text-amber-800 font-bold">
+              Độ tin cậy nhận diện cao nhất: <span class="text-rose-700 font-black font-mono text-sm px-2 py-0.5 rounded bg-white border border-amber-200">{{ result.top_confidence }}%</span>
             </p>
-            <div class="pl-7 pt-1 flex items-center gap-2 text-[11px] text-amber-900 font-bold">
-              <span>Độ tin cậy cao nhất: <code class="font-mono bg-white px-2 py-0.5 rounded border border-amber-200 text-rose-600 font-black">{{ result.top_confidence }}%</code></span>
-              <span>•</span>
-              <span class="text-slate-600">Đã tự động ẩn danh sách Top-1-2-3 để tránh mâu thuẫn kết quả</span>
-            </div>
           </div>
 
           <!-- Primary Class Result Header (CHỈ hiển thị khi ảnh hợp lệ) -->
@@ -344,7 +337,7 @@
 import { ref } from 'vue';
 import {
   ScanSearch, Upload, UploadCloud, Trash2, Cpu, Sparkles,
-  BarChart3, Eye, Info, Activity, Loader2, AlertTriangle
+  BarChart3, Eye, Info, Activity, Loader2
 } from 'lucide-vue-next';
 import {
   predictFurnitureImage, CLASS_LABELS_VI, type PredictionResult

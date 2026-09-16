@@ -43,9 +43,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['bar_stool', 'bed', 'chair', 'coffee_table', 'dining_table', 'dresser']
 NUM_CLASSES = len(CLASS_NAMES)
 
-# Out-of-Distribution (OOD) Confidence & Margin Thresholds
-CONFIDENCE_THRESHOLD = 50.0  # Ngưỡng tin cậy tối thiểu 50%
-MARGIN_THRESHOLD = 15.0      # Chênh lệch tối thiểu giữa Top-1 và Top-2 phải >= 15%
+# Out-of-Distribution (OOD) Thresholds (Sử dụng Temperature Scaling T=2.5 & Entropy Filter)
+TEMPERATURE = 2.5
+CALIBRATED_CONFIDENCE_THRESHOLD = 58.0  # Ngưỡng tin cậy đã hiệu chỉnh nhiệt độ (>= 58% mới là nội thất)
+MARGIN_THRESHOLD = 18.0                 # Chênh lệch tối thiểu giữa Top 1-2 phải >= 18%
+MAX_ENTROPY_THRESHOLD = 1.15            # Ngưỡng Entropy tối đa (Entropy > 1.15 là ảnh bị phân vân/ngoại lệ)
 
 eval_transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -208,40 +210,54 @@ async def predict(
     start_t = time.perf_counter()
     with torch.no_grad():
         logits = net(input_tensor)
-        probs = F.softmax(logits, dim=1)[0]
+        # Raw Softmax
+        probs_raw = F.softmax(logits, dim=1)[0]
+        # Temperature Scaled Softmax (T = 2.5) để giải quyết triệt để vấn đề Overconfidence của Softmax trên ảnh OOD
+        probs_temp = F.softmax(logits / TEMPERATURE, dim=1)[0]
+        # Tính Softmax Entropy
+        entropy = -torch.sum(probs_raw * torch.log(probs_raw + 1e-9)).item()
+
     inference_time_ms = round((time.perf_counter() - start_t) * 1000, 2)
 
-    # Get Top-3
-    top3_prob, top3_indices = torch.topk(probs, k=3)
+    # Get Top-3 theo Temperature Scaled
+    top3_prob_temp, top3_indices = torch.topk(probs_temp, k=3)
     raw_top3_results = []
-    for p, idx in zip(top3_prob, top3_indices):
+    for p, idx in zip(top3_prob_temp, top3_indices):
         raw_top3_results.append({
             "class_name": CLASS_NAMES[idx.item()],
             "confidence": round(p.item() * 100, 2)
         })
 
     raw_top_class = raw_top3_results[0]["class_name"]
-    raw_top_confidence = raw_top3_results[0]["confidence"]
+    calibrated_top_confidence = raw_top3_results[0]["confidence"]
+    raw_top_confidence = round(probs_raw[top3_indices[0]].item() * 100, 2)
     second_confidence = raw_top3_results[1]["confidence"]
-    margin = raw_top_confidence - second_confidence
+    margin = calibrated_top_confidence - second_confidence
 
     # Out-of-Distribution (OOD) Exception Checking
     is_valid_furniture = True
     warning_message = None
 
-    if raw_top_confidence < CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD:
+    # Kiểm tra OOD bằng 3 tiêu chí kết hợp: Ngưỡng hiệu chỉnh nhiệt độ < 58%, Margin < 18%, hoặc Entropy > 1.15
+    if calibrated_top_confidence < CALIBRATED_CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD or entropy > MAX_ENTROPY_THRESHOLD:
         is_valid_furniture = False
         warning_message = (
-            f"Hình ảnh không thuộc 6 danh mục sản phẩm nội thất của hệ thống "
-            f"(Độ tin cậy thấp: {raw_top_confidence:.1f}% < {CONFIDENCE_THRESHOLD}%)."
+            f"Hình ảnh tải lên không thuộc 6 danh mục sản phẩm nội thất của hệ thống "
+            f"(Độ tin cậy hiệu chỉnh: {calibrated_top_confidence:.1f}% < {CALIBRATED_CONFIDENCE_THRESHOLD}%)."
         )
         top_class = "non_furniture"
-        top_confidence = raw_top_confidence
-        top_3 = []  # Ẩn danh sách Top-1-2-3 khi không phải đồ nội thất để tránh mâu thuẫn logic
+        top_confidence = calibrated_top_confidence
+        top_3 = []  # Ẩn danh sách Top-1-2-3 khi không phải đồ nội thất
     else:
         top_class = raw_top_class
         top_confidence = raw_top_confidence
-        top_3 = raw_top3_results
+        top_3 = [
+            {
+                "class_name": r["class_name"],
+                "confidence": round(probs_raw[CLASS_NAMES.index(r["class_name"])].item() * 100, 2)
+            }
+            for r in raw_top3_results
+        ]
 
     # Grad-CAM computation
     grad_cam_engine = GradCAM(net, target_layer)
