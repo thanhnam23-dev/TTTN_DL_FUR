@@ -43,7 +43,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['bar_stool', 'bed', 'chair', 'coffee_table', 'dining_table', 'dresser']
 NUM_CLASSES = len(CLASS_NAMES)
 
-# Out-of-Distribution (OOD) Thresholds (Sử dụng Temperature Scaling T=2.5 & Entropy Filter)
+# OOD (T=2.5)
 TEMPERATURE = 2.5
 CALIBRATED_CONFIDENCE_THRESHOLD = 58.0  # Ngưỡng tin cậy đã hiệu chỉnh nhiệt độ (>= 58% mới là nội thất)
 MARGIN_THRESHOLD = 18.0                 # Chênh lệch tối thiểu giữa Top 1-2 phải >= 18%
