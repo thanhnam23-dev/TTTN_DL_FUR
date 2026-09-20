@@ -43,10 +43,10 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CLASS_NAMES = ['bar_stool', 'bed', 'chair', 'coffee_table', 'dining_table', 'dresser']
 NUM_CLASSES = len(CLASS_NAMES)
 
-# OOD (T=2.5)
+# Out-of-Distribution (OOD) Thresholds (Sử dụng Temperature Scaling T=2.5 & Entropy Filter)
 TEMPERATURE = 2.5
-CALIBRATED_CONFIDENCE_THRESHOLD = 58.0  # Ngưỡng tin cậy đã hiệu chỉnh nhiệt độ (>= 58% mới là nội thất)
-MARGIN_THRESHOLD = 18.0                 # Chênh lệch tối thiểu giữa Top 1-2 phải >= 18%
+CALIBRATED_CONFIDENCE_THRESHOLD = 50.0  # Ngưỡng tin cậy tròn 50% (>= 50% mới là nội thất)
+MARGIN_THRESHOLD = 15.0                 # Chênh lệch tối thiểu giữa Top 1-2 phải >= 15%
 MAX_ENTROPY_THRESHOLD = 1.15            # Ngưỡng Entropy tối đa (Entropy > 1.15 là ảnh bị phân vân/ngoại lệ)
 
 eval_transform = transforms.Compose([
@@ -238,7 +238,7 @@ async def predict(
     is_valid_furniture = True
     warning_message = None
 
-    # Kiểm tra OOD bằng 3 tiêu chí kết hợp: Ngưỡng hiệu chỉnh nhiệt độ < 58%, Margin < 18%, hoặc Entropy > 1.15
+    # Kiểm tra OOD bằng 3 tiêu chí kết hợp: Ngưỡng hiệu chỉnh nhiệt độ < 50%, Margin < 15%, hoặc Entropy > 1.15
     if calibrated_top_confidence < CALIBRATED_CONFIDENCE_THRESHOLD or margin < MARGIN_THRESHOLD or entropy > MAX_ENTROPY_THRESHOLD:
         is_valid_furniture = False
         warning_message = (
